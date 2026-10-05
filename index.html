@@ -62,7 +62,13 @@
     <div class="row" style="margin-top:10px">
       <div style="flex:1">
         <label class="f" for="gemModel">Translation model</label>
-        <input type="text" id="gemModel" value="gemini-3.8-flash" spellcheck="false">
+        <input type="text" id="gemModel" value="gemini-2.5-flash" spellcheck="false" list="modelList" placeholder="gemini-2.5-flash">
+        <datalist id="modelList">
+          <option value="gemini-2.5-flash"></option>
+          <option value="gemini-2.5-flash-lite"></option>
+          <option value="gemini-2.0-flash"></option>
+          <option value="gemini-1.5-flash"></option>
+        </datalist>
       </div>
       <div style="flex:1">
         <label class="f" for="ocrLang">Thumbnail OCR language</label>

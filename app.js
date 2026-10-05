@@ -20,7 +20,7 @@ function getKeys() {
   return {
     ytKey: $('ytKey').value.trim() || sessionKeys.ytKey,
     gemKey: $('gemKey').value.trim() || sessionKeys.gemKey,
-    model: $('gemModel').value.trim() || 'gemini-3.8-flash',
+    model: $('gemModel').value.trim() || 'gemini-2.5-flash',
     ocrLang: $('ocrLang').value || 'eng'
   };
 }
@@ -34,7 +34,7 @@ function loadSettings() {
     $('ytKey').value = store.get('ytKey', '');
     $('gemKey').value = store.get('gemKey', '');
   }
-  $('gemModel').value = store.get('model', 'gemini-3.8-flash');
+  $('gemModel').value = store.get('model', 'gemini-2.5-flash');
   $('ocrLang').value = store.get('ocrLang', 'eng');
   sessionKeys.ytKey = r ? '' : store.get('sessionYt', '');
   sessionKeys.gemKey = r ? '' : store.get('sessionGem', '');
@@ -44,7 +44,7 @@ function saveSettings() {
   const remember = $('remember').checked;
   const yt = $('ytKey').value.trim(), gem = $('gemKey').value.trim();
   store.set('remember', remember ? '1' : '0');
-  store.set('model', $('gemModel').value.trim() || 'gemini-3.8-flash');
+  store.set('model', $('gemModel').value.trim() || 'gemini-2.5-flash');
   store.set('ocrLang', $('ocrLang').value || 'eng');
   if (remember) {
     store.set('ytKey', yt); store.set('gemKey', gem);
