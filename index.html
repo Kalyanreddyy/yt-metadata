@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14161a">
+<title>YT Translate</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  :root { --bg:#14161a; --card:#1e2126; --line:#2c3138; --txt:#e8eaed; --mut:#9aa0a6; --acc:#4c8dff; --lime:#d7f75b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:26px 16px 60px; }
+  header.top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  header.top .brand { font-size:12px; letter-spacing:.14em; color:var(--mut); font-weight:700; }
+  header.top button.linklike { background:none; border:none; color:var(--txt); font-size:14px; cursor:pointer; text-decoration:underline; text-underline-offset:4px; }
+  h1 { font-size:clamp(34px,7vw,58px); line-height:1.02; margin:6px 0 8px; letter-spacing:-.02em; }
+  .sub { color:var(--mut); margin:0 0 18px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  .row { display:flex; gap:10px; }
+  input[type=text], input[type=password], select { width:100%; padding:11px 13px; border-radius:10px; border:1px solid var(--line); background:#14161a; color:var(--txt); font-size:14px; }
+  label.f { display:block; font-size:12.5px; color:var(--mut); margin:10px 0 4px; }
+  button.go { padding:11px 20px; border:0; border-radius:10px; background:var(--lime); color:#14161a; font-size:15px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  button.go:disabled { opacity:.55; cursor:wait; }
+  button.ghost { padding:11px 16px; border-radius:10px; border:1px solid var(--line); background:transparent; color:var(--txt); font-size:14px; cursor:pointer; white-space:nowrap; }
+  a.openyt { display:inline-block; padding:11px 16px; border-radius:10px; border:1px solid var(--line); color:var(--txt); font-size:14px; text-decoration:none; white-space:nowrap; }
+  #status { color:var(--mut); font-size:13px; min-height:20px; margin:6px 0; }
+  #error { background:#4a1d1d; border:1px solid #7a2e2e; color:#ffb4b4; padding:11px 14px; border-radius:10px; margin-bottom:12px; }
+  .hidden { display:none !important; }
+  .meta { color:var(--mut); font-size:13px; margin:2px 0 10px; }
+  .meta b { color:var(--txt); }
+  section.blk { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
+  section.blk h2 { font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--mut); margin:0 0 8px; display:flex; justify-content:space-between; align-items:center; }
+  section.blk pre { white-space:pre-wrap; word-break:break-word; margin:0; font-family:inherit; font-size:14px; max-height:220px; overflow-y:auto; }
+  .copy { font-size:12px; font-weight:700; padding:4px 12px; border-radius:7px; border:1px solid var(--line); background:#2a2f36; color:var(--txt); cursor:pointer; }
+  .copy:hover { border-color:var(--acc); }
+  details.blk { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 16px; margin-bottom:12px; }
+  details.blk summary { cursor:pointer; font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--mut); font-weight:700; }
+  details.blk pre { white-space:pre-wrap; word-break:break-word; font-family:inherit; font-size:13.5px; color:var(--mut); max-height:180px; overflow-y:auto; }
+  .checks { font-size:13px; color:var(--mut); }
+  .checks .ok { color:#7ee2a0; } .checks .warn { color:#ffd97a; } .checks .info { color:#8fc3ff; }
+  .thumb { max-width:100%; border-radius:8px; border:1px solid var(--line); }
+  .chkline { display:flex; gap:8px; align-items:center; font-size:13.5px; margin:8px 0; }
+  footer { color:var(--mut); font-size:12px; margin-top:24px; }
+  footer code { background:var(--card); padding:1px 6px; border-radius:5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="brand">PASTE &rarr; FETCH &rarr; TRANSLATE</span>
+    <button class="linklike" id="settingsToggle">Key settings</button>
+  </header>
+  <h1>One link. Full translation.</h1>
+  <p class="sub">Paste a YouTube link. Title, description, thumbnail and thumbnail text are fetched and translated automatically — right here in your browser.</p>
+
+  <div class="card hidden" id="settingsCard">
+    <label class="f" for="ytKey">YouTube Data API key <span style="color:#ff9d9d">*</span> <span style="float:right"><a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" style="color:var(--acc)">get one free</a></span></label>
+    <input type="password" id="ytKey" placeholder="AIza…" autocomplete="off" spellcheck="false">
+    <label class="f" for="gemKey">Gemini API key <span style="color:var(--mut)">(for translation)</span> <span style="float:right"><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--acc)">get one free</a></span></label>
+    <input type="password" id="gemKey" placeholder="AI…" autocomplete="off" spellcheck="false">
+    <div class="row" style="margin-top:10px">
+      <div style="flex:1">
+        <label class="f" for="gemModel">Translation model</label>
+        <input type="text" id="gemModel" value="gemini-3.8-flash" spellcheck="false">
+      </div>
+      <div style="flex:1">
+        <label class="f" for="ocrLang">Thumbnail OCR language</label>
+        <select id="ocrLang">
+          <option value="eng" selected>English / Latin script</option>
+          <option value="hin">Hindi</option>
+          <option value="spa">Spanish</option>
+          <option value="por">Portuguese</option>
+          <option value="fra">French</option>
+          <option value="deu">German</option>
+          <option value="ara">Arabic</option>
+          <option value="rus">Russian</option>
+          <option value="chi_sim">Chinese (Simplified)</option>
+          <option value="jpn">Japanese</option>
+        </select>
+      </div>
+    </div>
+    <div class="chkline"><input type="checkbox" id="remember"> <label for="remember">Remember on this device</label></div>
+    <div class="row">
+      <button class="ghost" id="saveKeys">Save</button>
+      <button class="ghost" id="clearKeys">Remove saved keys</button>
+    </div>
+    <p style="font-size:12px;color:var(--mut);margin:10px 0 0">Keys stay in <em>your</em> browser only (localStorage when "remember" is ticked, memory otherwise). They are sent straight to Google's APIs and never anywhere else. This page is static — there is no server.</p>
+  </div>
+
+  <div class="row">
+    <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off" spellcheck="false">
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button class="go" id="go">Get full result</button>
+    <a class="openyt hidden" id="openYt" href="#" target="_blank" rel="noopener">Open video ↗</a>
+    <button class="ghost hidden" id="newLink">New link</button>
+  </div>
+  <div id="status"></div>
+  <div id="error" class="hidden"></div>
+  <div id="results" class="hidden"></div>
+
+  <footer>Runs 100% in your browser. YouTube Data API key required for metadata · Gemini key required for translation · thumbnail OCR runs on-device (first use downloads ~15&nbsp;MB).</footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

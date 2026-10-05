@@ -1,0 +1,21 @@
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local tooling (if you ever build/test locally)
+node_modules/
+dist/
+build/
+
+# Never commit secrets — keys live in the browser's localStorage, not in files
+.env
+.env.*
+*.pem
+*.key
