@@ -4,7 +4,7 @@ Paste a public YouTube link → get copy-ready English translations of the video
 **title**, **description**, and **thumbnail text**. Runs 100% in the browser —
 there is no server.
 
-Live: `https://<your-username>.github.io/yt-translate/`
+Live: `https://kalyanreddyy.github.io/yt-metadata/`
 
 ## How it works
 
