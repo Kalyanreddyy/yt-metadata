@@ -108,6 +108,13 @@ function runChecks(original, translated, kind) {
       ? { status: 'warn', message: cap(kind) + ': ' + missing.length + ' number/timestamp(s) not found in translation (' + missing.slice(0, 5).join(', ') + ').' }
       : { status: 'pass', message: cap(kind) + ': all numbers/timestamps preserved.' });
   }
+  const otags = extractHashtags(orig), ttags = extractHashtags(trans);
+  if (otags.length) {
+    const missing = otags.filter(t => ttags.indexOf(t) === -1);
+    out.push(missing.length
+      ? { status: 'warn', message: cap(kind) + ': ' + missing.length + ' hashtag(s) missing from translation (' + missing.join(' ') + ').' }
+      : { status: 'pass', message: cap(kind) + ': all ' + otags.length + ' hashtag(s) preserved.' });
+  }
   if (trans.length) {
     const ratio = trans.length / Math.max(orig.length, 1);
     if (ratio < 0.2 || ratio > 5) out.push({ status: 'warn', message: cap(kind) + ': translation length looks off (' + ratio.toFixed(1) + 'x original) — check for truncation.' });
@@ -116,6 +123,26 @@ function runChecks(original, translated, kind) {
   return out;
 }
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+/* hashtags shown by YouTube beside the view count come from the description */
+function extractHashtags(text) {
+  const tags = [];
+  const re = /#([\p{L}\p{N}_]+)/gu;
+  let m;
+  while ((m = re.exec(text || '')) !== null) {
+    const t = '#' + m[1];
+    if (tags.indexOf(t) === -1) tags.push(t);
+    if (tags.length > 30) break;
+  }
+  return tags;
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return d.getUTCDate() + ' ' + months[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+}
 
 /* ---------- translation via Gemini ---------- */
 const PROMPTS = {
@@ -158,11 +185,14 @@ async function run() {
 
   try {
     setStatus('Fetching video info…');
-    const mr = await fetch('https://www.googleapis.com/youtube/v3/videos?part=snippet&id=' + id + '&key=' + encodeURIComponent(keys.ytKey));
+    const mr = await fetch('https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=' + id + '&key=' + encodeURIComponent(keys.ytKey));
     const md = await mr.json().catch(() => ({}));
     if (!mr.ok) throw new Error('YouTube API: ' + ((md.error && md.error.message) || ('HTTP ' + mr.status)));
     if (!md.items || !md.items.length) throw new Error('Video not found — it may be private or deleted.');
     const s = md.items[0].snippet;
+    const stats = md.items[0].statistics || {};
+    const viewCount = stats.viewCount ? Number(stats.viewCount).toLocaleString('en-US') : '';
+    const hashtags = extractHashtags(s.description || '');
     const th = s.thumbnails || {};
     const thumbUrl = (th.maxres || th.standard || th.high || th.medium || th.default || {}).url;
     if (!thumbUrl) throw new Error('No thumbnail available for this video.');
@@ -205,7 +235,8 @@ async function run() {
 
     render({
       watchUrl, thumbUrl,
-      channel: s.channelTitle || '', published: (s.publishedAt || '').slice(0, 10),
+      channel: s.channelTitle || '', pubDate: fmtDate(s.publishedAt),
+      viewCount: viewCount, hashtags: hashtags,
       lang: s.defaultLanguage || s.defaultAudioLanguage || 'unknown',
       oTitle: s.title || '', eTitle: enTitle,
       oDesc: s.description || '', eDesc: enDesc,
@@ -235,7 +266,14 @@ function render(r) {
   const cls = c => c.status === 'pass' ? 'ok' : c.status === 'warn' ? 'warn' : 'info';
   const icon = c => c.status === 'pass' ? '\u2713 ' : c.status === 'warn' ? '\u26a0 ' : '\u2139 ';
   let h = '';
-  h += '<div class="meta">Channel: <b>' + esc(r.channel) + '</b> &middot; Published: <b>' + esc(r.published || '—') + '</b> &middot; Source language: <b>' + esc(r.lang) + '</b> &middot; <a href="' + esc(r.watchUrl) + '" target="_blank" rel="noopener" style="color:var(--acc)">Open on YouTube</a></div>';
+  h += '<div class="meta">Channel: <b>' + esc(r.channel) + '</b> &middot; Published: <b>' + esc(r.pubDate) + '</b> &middot; Source language: <b>' + esc(r.lang) + '</b> &middot; <a href="' + esc(r.watchUrl) + '" target="_blank" rel="noopener" style="color:var(--acc)">Open on YouTube</a></div>';
+  if (r.viewCount || (r.hashtags && r.hashtags.length)) {
+    h += '<div class="meta">' +
+      (r.viewCount ? '&#128065; <b>' + esc(r.viewCount) + '</b> views' : '') +
+      ((r.viewCount && r.hashtags.length) ? ' &middot; ' : '') +
+      (r.hashtags.length ? '<span id="hashtags">' + r.hashtags.map(esc).join(' ') + '</span> <button class="copy" data-t="hashtags">COPY</button>' : '') +
+      '</div>';
+  }
   h += '<div class="row" style="margin-bottom:12px"><button class="go" id="copyAllEn">Copy all English</button></div>';
   h += section('eTitle', 'English Title', r.eTitle);
   h += section('eDesc', 'English Description', r.eDesc);
